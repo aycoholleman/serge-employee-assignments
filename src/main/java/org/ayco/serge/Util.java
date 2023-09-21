@@ -80,5 +80,21 @@ final class Util {
     return tot;
   }
 
+  static int countEmployeesInPref1Location(Location[] locations) {
+    int tot = 0;
+    for (Location loc : locations) {
+      tot += loc.getEmployees().stream().filter(e -> e.pref1 == loc.getName()).count();
+    }
+    return tot;
+  }
+
+  static int countEmployeesInPref2Location(Location[] locations) {
+    int tot = 0;
+    for (Location loc : locations) {
+      tot += loc.getEmployees().stream().filter(e -> e.pref2 == loc.getName()).count();
+    }
+    return tot;
+  }
+
 
 }

@@ -4,11 +4,8 @@ import com.opencsv.CSVWriter;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.text.DecimalFormat;
+import java.util.*;
 
 import static java.util.stream.Collectors.joining;
 import static org.ayco.serge.Util.*;
@@ -17,15 +14,13 @@ public class Main {
 
   public static void main(String[] args) {
     List<Employee> employees = Employee.loadEmployees();
-    //Collections.shuffle(employees);
+    Collections.shuffle(employees);
     String[] roles = Util.getRoles(employees);
-    f("Extracted these employee roles from CSV file: %s",
-          Arrays.stream(roles).collect(joining(", ")));
+    String str = Arrays.stream(roles).collect(joining(", "));
+    f("Extracted these employee roles from CSV file: %s%n", str);
     Location[] locations = Util.createEmptyLocations(employees);
-    System.out.println("Extracted these location names from CSV file: " +
-          Arrays.stream(locations)
-                .map(Location::getName)
-                .collect(joining(", ")));
+    str = Arrays.stream(locations).map(Location::getName).collect(joining(", "));
+    f("Extracted these location names from CSV file: %s%n", str);
     f("Distributing %d employees and %d roles across %d locations%n",
           employees.size(),
           roles.length,
@@ -38,19 +33,34 @@ public class Main {
     optimizeFTESpread(employees, locations, roles);
     minimizeLocationMismatches(locations);
     optimizePreferences(locations);
-    //writeCsvFile(locations);
+    System.out.println();
+    System.out.println("Optimizations finished");
+    DecimalFormat df = new DecimalFormat("0.0");
+    f("Global FTE mean: %s%n", df.format(Util.getFTEMean(employees)));
+    for (Location loc : locations) {
+      f("FTE mean %s: %s%n", loc, df.format(loc.getFTEMean()));
+    }
+    int pref1Count = Util.countEmployeesInPref1Location(locations);
+    int pref2Count = Util.countEmployeesInPref2Location(locations);
+    f("Number of employees in location of 1st preference: %d%n", pref1Count);
+    f("Number of employees in location of 2nd preference: %d%n", pref2Count);
+    double pctSatisfied = (100 * (pref1Count + pref2Count) / employees.size());
+    str = df.format(pctSatisfied);
+    f("Percentage of employees in location of 1st or 2nd preference: %s%%%n", str);
+    writeCsvFile(locations);
   }
 
   private static void optimizeFTESpread(List<Employee> employees,
         Location[] locations,
         String[] roles) {
+    System.out.println("******** Optimizing FTE distribution ********");
     Arrays.stream(locations).forEach(Location::sortByFTE);
     MAIN_LOOP:
     for (String role : roles) {
       f("Optimizing FTE distribution for role %s%n", role);
       int employeeCount = countEmployeesInRole(employees, role);
       if (employeeCount < 3) {
-        f("--> Skipped (only %d employees with this role)%n", employeeCount);
+        f("--> Skipped. Only %d employee(s) with this role%n", employeeCount);
         continue;
       }
       Set<Double> lowestCache = HashSet.newHashSet(employeeCount);
@@ -88,16 +98,21 @@ public class Main {
   }
 
   private static void minimizeLocationMismatches(Location[] locations) {
+    System.out.println("******** Minimizing location mismatches ********");
     MAIN_lOOP:
     for (int i = 0; i < locations.length; ++i) {
-      int startIndex = 0;
       Location loc0 = locations[i];
       f("Minimizing location mismatches for location %s%n", loc0);
+      int idx0 = loc0.getIndexOfEmpWithLocationMismatch(0);
+      if (idx0 == -1) {
+        f("--> No location mismatches for employees in %s%n", loc0);
+        continue;
+      }
+      int startIndex = 0;
       MID_LOOP:
       while (startIndex < loc0.getEmployees().size()) {
-        int idx0 = locations[i].getIndexOfEmpWithLocationMismatch(startIndex);
+        idx0 = loc0.getIndexOfEmpWithLocationMismatch(startIndex);
         if (idx0 == -1) {
-          f("No location mismatches for employees in %s%n", loc0);
           continue MAIN_lOOP;
         }
         startIndex = idx0 + 1;
@@ -105,24 +120,27 @@ public class Main {
         for (int j = 0; j < locations.length; ++j) {
           if (i == j) continue;
           Location loc1 = locations[j];
-          int idx1 = loc1.getIndexOfEmpWithLocationMatch(emp0, loc0);
-          if (idx1 == -1) {
-            f("Unable to solve location mismatch for %s%n", emp0.name);
+          if (emp0.pref1 == loc1.getName() || emp0.pref2 == loc1.getName()) {
+            int idx1 = loc1.getIndexOfEmpWithLocationMatch(emp0, loc0);
+            if (idx1 == -1) {
+              f("--> Unable to solve location mismatch for %s%n", emp0.name);
+              continue MID_LOOP;
+            }
+            Employee emp1 = loc1.getEmployee(idx1);
+            f("--> Moving %s from %s to %s%n", emp1.name, loc1, loc0);
+            loc0.setEmployee(idx0, emp1);
+            f("--> Moving %s from %s to %s%n", emp0.name, loc0, loc1);
+            loc1.setEmployee(idx1, emp0);
             continue MID_LOOP;
           }
-          Employee emp1 = loc1.getEmployee(idx1);
-          f("--> Moving %s from %s to %s%n", emp1.name, loc1, loc0);
-          loc0.setEmployee(idx0, emp1);
-          f("--> Moving %s from %s to %s%n", emp0.name, loc0, loc1);
-          loc1.setEmployee(idx1, emp0);
-          continue MID_LOOP;
         }
       }
     }
   }
 
   private static void optimizePreferences(Location[] locations) {
-    System.out.println("Maximizing location preferences");
+    System.out.println("******** Optimizing preferences ********");
+    int swaps = 0;
     MAIN_lOOP:
     for (int i = 0; i < locations.length; ++i) {
       int startIndex = 0;
@@ -140,12 +158,16 @@ public class Main {
           int idx1 = loc1.getIndexOfEmpWithFirstPreference(emp0, loc0);
           if (idx1 == -1) continue;
           Employee emp1 = loc1.getEmployee(idx1);
-          f("Moving %s from %s to %s%n", emp1.name, loc0, loc1);
+          f("--> Moving %s from %s to %s%n", emp1.name, loc0, loc1);
           loc0.setEmployee(idx0, emp1);
           f("--> Moving %s from %s to %s%n", emp0.name, loc1, loc0);
           loc1.setEmployee(idx1, emp0);
+          ++swaps;
         }
       }
+    }
+    if (swaps == 0) {
+      System.out.println("No employees employees were moved to their first preference");
     }
   }
 
