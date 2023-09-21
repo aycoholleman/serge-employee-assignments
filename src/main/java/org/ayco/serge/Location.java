@@ -31,7 +31,7 @@ final class Location {
   }
 
   void sortByFTE() {
-    Collections.sort(employees, (e1, e2) -> e1.fte - e2.fte);
+    Collections.sort(employees, (e1, e2) -> Double.compare(e1.fte, e2.fte));
   }
 
   boolean isEmpty() {
@@ -50,8 +50,12 @@ final class Location {
     employees.set(index, emp);
   }
 
+  int countEmployeesInRole(String role) {
+    return Util.countEmployeesInRole(employees, role);
+  }
+
   boolean hasEmployeeWithRole(String role) {
-    return employees.stream().anyMatch(e -> e.role.equals(role));
+    return countEmployeesInRole(role) != 0;
   }
 
   int getIndexOfEmpWithLowestFTE(String role) {

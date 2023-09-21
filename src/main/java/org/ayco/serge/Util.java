@@ -45,29 +45,39 @@ final class Util {
   }
 
   static Location getLocationWithLowestFTEMean(Location[] locations, String role) {
-    Location loc = null;
+    Location loc0 = null;
     for (int i = 0; i < locations.length; ++i) {
-      if (!locations[i].hasEmployeeWithRole(role)) {
+      Location loc1 = locations[i];
+      if (!loc1.hasEmployeeWithRole(role)) {
         continue;
       }
-      if (loc == null || (locations[i].getFTEMean(role) < loc.getFTEMean(role))) {
-        loc = locations[i];
+      if (loc0 == null || (loc1.getFTEMean(role) < loc0.getFTEMean(role))) {
+        loc0 = loc1;
       }
     }
-    return loc;
+    return loc0;
   }
 
   static Location getLocationWithHighestFTEMean(Location[] locations, String role) {
-    Location loc = null;
+    Location loc0 = null;
     for (int i = 0; i < locations.length; ++i) {
-      if (!locations[i].hasEmployeeWithRole(role)) {
+      Location loc1 = locations[i];
+      if (!loc1.hasEmployeeWithRole(role)) {
         continue;
       }
-      if (loc == null || (locations[i].getFTEMean(role) > loc.getFTEMean(role))) {
-        loc = locations[i];
+      if (loc0 == null || (loc1.getFTEMean(role) > loc0.getFTEMean(role))) {
+        loc0 = loc1;
       }
     }
-    return loc;
+    return loc0;
+  }
+
+  static int countLocationsForRole(Location[] locations, String role) {
+    int tot = 0;
+    for (Location loc : locations) {
+      tot += countEmployeesInRole(loc.getEmployees(), role) == 0 ? 0 : 1;
+    }
+    return tot;
   }
 
 
