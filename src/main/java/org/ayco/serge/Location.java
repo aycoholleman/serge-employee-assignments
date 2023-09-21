@@ -91,7 +91,7 @@ final class Location {
   int getIndexOfEmpWithLocationMismatch(int startIndex) {
     for (int i = startIndex; i < employees.size(); ++i) {
       Employee e = employees.get(i);
-      if (e.pref1 != this.name && e.pref2 != this.name) {
+      if (!e.pref1.equals(this.name) && !e.pref2.equals(this.name)) {
         return i;
       }
     }

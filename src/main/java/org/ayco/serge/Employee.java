@@ -19,7 +19,6 @@ final class Employee {
       reader.skip(1);
       List<String[]> records = reader.readAll();
       List<Employee> emps = new ArrayList<>(records.size());
-      System.out.println("Number of records in CSV file: " + records.size());
       for (int i = 0; i < records.size(); ++i) {
         String[] record = records.get(i);
         if (record.length == 1 && record[0].strip().isEmpty()) {

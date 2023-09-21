@@ -83,7 +83,7 @@ final class Util {
   static int countEmployeesInPref1Location(Location[] locations) {
     int tot = 0;
     for (Location loc : locations) {
-      tot += loc.getEmployees().stream().filter(e -> e.pref1 == loc.getName()).count();
+      tot += loc.getEmployees().stream().filter(e -> e.pref1.equals(loc.getName())).count();
     }
     return tot;
   }
@@ -91,7 +91,7 @@ final class Util {
   static int countEmployeesInPref2Location(Location[] locations) {
     int tot = 0;
     for (Location loc : locations) {
-      tot += loc.getEmployees().stream().filter(e -> e.pref2 == loc.getName()).count();
+      tot += loc.getEmployees().stream().filter(e -> e.pref2.equals(loc.getName())).count();
     }
     return tot;
   }
